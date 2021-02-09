@@ -13,30 +13,71 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 
 
-def generate_docx_from_schedule(context:dict):
-    template = DocxTemplate('template.docx')
+def create_table(dict_:dict, name_docx):
+    document = Document(f'template.docx')
+
+    long_topics = int((len(dict_)-16)/3)
+    table = document.tables[0]
+    for i in range(long_topics):
+        new_row = table.add_row()
+            # first column 
+        paragraph = table.rows[i+1].cells[0].add_paragraph()
+        first_column = paragraph.add_run(f'{str(i+1)}.')
+        paragraph.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        first_column.bold = True
+        first_column.font.name = 'Calibri'
+        first_column.font.size = Pt(10)      
+
+            # second_column
+        cell = table.rows[i+1].cells[1]
+        cell.text = f'{{{{topic{i+1}}}}}'   #dict_[id][f'topic{i+1}']
+        format_cell = cell.paragraphs[0].runs[0]
+        format_cell.font.name = 'Calibri'
+        format_cell.font.size = Pt(10)
+            
+            # third column
+        cell = table.rows[i+1].cells[2]
+        cell.text = f'{{{{content_topic{i+1}}}}}' #dict_[id][f'{{{{content_topic{i+1}}}}}']
+        format_cell = cell.paragraphs[0].runs[0]  
+        format_cell.font.name = 'Calibri'
+        format_cell.font.size = Pt(10)
+
+            # fourth_column
+        cell = table.rows[i+1].cells[3]
+        cell.text = f'{{{{competence{i+1}}}}}' # dict_[id][f'{{{{competence{i+1}}}}}']
+        format_cell = cell.paragraphs[0].runs[0]  
+        format_cell.font.name = 'Calibri'
+        format_cell.font.size = Pt(10)
+
+    document.save(f'annotations/{name_docx}.docx')       
+
+def generate_docx_from_schedule(context:dict, lenght:int, count:int):
+    #generate docx in dir annotations
     try:
         os.mkdir('annotations')
+        print('Folder is create!')
     except OSError as e:
-        print('Folder is found!')
-    #checking if there is a file 
-    for notempty in context:
-        temp = context[notempty]['name_discipline']
-        index = context[notempty]['index']
+
+    # #checking if there is a file 
+    # for notempty in context:
+    #     temp = context[notempty]['name_discipline']
+    #     index = context[notempty]['index']
+    #     name_lenght = temp.find('/')
+    #     if os.path.exists('annotations/{}.docx'.format(index+'_'+temp[:name_lenght])):
+    #         os.remove('annotations/{}.docx'.format(index+'_'+temp[:name_lenght]))
+ 
+        temp = context['name_discipline']
+        index = context['index']
         name_lenght = temp.find('/')
-        if os.path.exists('annotations/{}.docx'.format(index+'_'+temp[:name_lenght])):
-            os.remove('annotations/{}.docx'.format(index+'_'+temp[:name_lenght]))
-    #generate docx in dir annotations
-    for name in context:
-        temp = context[name]['name_discipline']
-        index = context[name]['index']
-        name_lenght = temp.find('/')
-        for num in range(len(context)):
-            try:
-                template.render(context[num])
-                template.save("annotations/%s.docx" %str(index+'_'+temp[:name_lenght]))
-            except:
-                print("Oops!")
+        name_docx = str(index+'_'+temp[:name_lenght])
+        try:
+            create_table(context, name_docx)
+            template = DocxTemplate(f'annotations/{name_docx}.docx')
+            template.render(context)
+            template.save("annotations/%s.docx" %str(index+'_'+temp[:name_lenght]))
+        except:
+            print("Oops!")
+        return print(f'successful create {count}/{lenght}')
 
 
 
@@ -50,8 +91,6 @@ credentials = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_FILE,
 
 httpAuth = credentials.authorize(httplib2.Http()) 
 service = apiclient.discovery.build('sheets', 'v4', http = httpAuth)
-
-#range rows in google sheet
 range_name = 'sheet!A2:AF3'
 
 # clear cells 
@@ -64,82 +103,35 @@ for row in service.spreadsheets().values().get(spreadsheetId=spreadsheetId, rang
         if cell == len(row)-1:
             data_sheets.append(temp)
 
-#future keys
-keys = ['index','name_discipline','description','block',
-                'course_och', 'semester_och', 'course_z', 'form_educational', 'credit_hours', 
-               'academic_hours', 'countact_hours', 'credit_hours_z', 'academic_hours_z',
-                'countact_hours_z', 'topic1', 'content_topic1', 'competence1', 
-                'topic2', 'content_topic2', 'competence2', 'topic3', 'content_topic3', 'competence3',
-                'topic4', 'content_topic4', 'competence4', 'topic5', 'content_topic5', 'competence5',
-                'topic6', 'content_topic6', 'competence6']
 
-# match two list
-dict_ = {}
-for i, value in enumerate(data_sheets):
-    new_match_list = dict(zip(keys, value))              
-    dict_.setdefault(i, new_match_list)
+if __name__=='__main__':       
+    #future keys
+    keys = ['index','name_discipline','description','block',
+                    'course_och', 'semester_och', 'course_z', 'form_educational', 'credit_hours', 
+                'academic_hours', 'countact_hours', 'credit_hours_z', 'academic_hours_z',
+                    'countact_hours_z', 'topic1', 'content_topic1', 'competence1', 
+                    'topic2', 'content_topic2', 'competence2', 'topic3', 'content_topic3', 'competence3',
+                    'topic4', 'content_topic4', 'competence4', 'topic5', 'content_topic5', 'competence5',
+                    'topic6', 'content_topic6', 'competence6']
 
-## add new parametors 
-for index in dict_:
-    if 'В.ДВ.' in dict_[index]['index']:       
-        choice_type = {'choice_type':'части, формируемой участниками образовательных отношений'} 
-        type_discipline = {'type_discipline':'по выбору'} 
-        dict_[index].update(choice_type)
-        dict_[index].update(type_discipline)
-    else:
-        choice_type = {'choice_type':'обязательной части'} 
-        type_discipline = {'type_discipline':'обязательной'} 
-        dict_[index].update(choice_type)
-        dict_[index].update(type_discipline)
+    # match two list
+    dict_ = {}
+    for i, value in enumerate(data_sheets):
+        new_match_list = dict(zip(keys, value))              
+        dict_.setdefault(i, new_match_list)
 
-document = Document('template.docx')
-for id in dict_:
-    long_topics = int((len(dict_[id])-16)/3)
-    table = document.tables[0]
-    for i in range(long_topics):
-        new_row = table.add_row()
-        text = table.rows[i+1].cells
-        row = table.rows[i+1]
-        
-        paragraph = row.cells[0].add_paragraph()
-        # first column 
-        first_column = paragraph.add_run(f'{str(i+1)}.')
-        paragraph.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        first_column.bold = True
-        first_column.font.name = 'Calibri'
-        first_column.font.size = Pt(10)      
+    ## add new parametors 
+    for index in dict_:
+        if 'В.ДВ.' in dict_[index]['index']:       
+            choice_type = {'choice_type':'части, формируемой участниками образовательных отношений'} 
+            type_discipline = {'type_discipline':'по выбору'} 
+            dict_[index].update(choice_type)
+            dict_[index].update(type_discipline)
+        else:
+            choice_type = {'choice_type':'обязательной части'} 
+            type_discipline = {'type_discipline':'обязательной'} 
+            dict_[index].update(choice_type)
+            dict_[index].update(type_discipline)
 
-        # second_column 
-        paragraph = row.cells[1].add_paragraph()
-        second_column = paragraph.add_run(dict_[id][f'topic{i+1}'])   
-        second_column = 'Calibri'
-        second_column = Pt(10)
-        
-        # third column
-        paragraph = row.cells[2].add_paragraph()
-        third_column = paragraph.add_run(dict_[id][f'topic{i+1}'])   
-        third_column = 'Calibri'
-        third_column = Pt(10)
-
-        # fourth column
-        paragraph = row.cells[3].add_paragraph()
-        fourth_colmn = paragraph.add_run(dict_[id][f'topic{i+1}'])
-        fourth_colmn = 'Calibri'
-        fourth_colmn = Pt(10)
-
-        
-        text[1].text = dict_[id][f'topic{i+1}']
-        text[2].text = dict_[id][f'content_topic{i+1}']
-        text[3].text = dict_[id][f'competence{i+1}']
-
-        
-
-    
-    document.save('demo.docx')
-    
-
-
-
-if __name__ == '_main':
-    #start function
-    generate_docx_from_schedule(dict_)
+    for i in range(0,len(dict_)):
+        generate_docx_from_schedule(dict_[i], len(dict_), i+1)
