@@ -24,4 +24,4 @@ python sheeets.py
 ```
 
 ## Примечание. 
-Чтобы данные подгружались правильно необходимо заполнять таблицу в данном формате. 
+Чтобы данные подгружались правильно необходимо заполнять таблицу в [данном формате](https://docs.google.com/spreadsheets/d/1SEz5_QVrWDzSb6g60KlwxShdmPGHSnq3EBw5zJ8k-jQ/edit?usp=sharing). 
