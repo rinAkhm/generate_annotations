@@ -58,22 +58,22 @@ def create_table(dict_:dict, name_docx):
 
 def generate_docx_from_schedule(context:dict, lenght:int, count:int):
     '''This function changes the tag to a word from the google sheet table'''
-    try:
+    if not os.path.isdir('annotations'):
         os.mkdir('annotations')
-        print('Folder is create!')
-    except OSError as e:
-        temp = context['name_discipline']
-        index = context['index']
-        name_lenght = temp.find('/')
-        name_docx = str(index+'_'+temp[:name_lenght])
-        try:
-            create_table(context, name_docx)
-            template = DocxTemplate(f'annotations/{name_docx}.docx')
-            template.render(context)
-            template.save("annotations/%s.docx" %str(index+'_'+temp[:name_lenght]))
-        except:
-            print("Oops!")
-        return print(f'successful create {count}/{lenght}')
+        print('Folder is created!')
+    
+    temp = context['name_discipline']
+    index = context['index']
+    name_lenght = temp.find('/')
+    name_docx = str(index+'_'+temp[:name_lenght])
+    try:
+        create_table(context, name_docx)
+        template = DocxTemplate(f'annotations/{name_docx}.docx')
+        template.render(context)
+        template.save("annotations/%s.docx" %str(index+'_'+temp[:name_lenght]))
+    except:
+        print("Oops!")
+    return print(f'successful create {count}/{lenght}')
 
 
 
@@ -85,20 +85,21 @@ if __name__=='__main__':
 
     httpAuth = credentials.authorize(httplib2.Http()) 
     service = apiclient.discovery.build('sheets', 'v4', http = httpAuth)
-    range_name = f'{sheet}!A2:AF3'
+    range_name = f'{sheet}!A3:AL7'
 
     #filter list of sheet
     sheet = service.spreadsheets().values().get(spreadsheetId=spreadsheetId, range=range_name).execute().get('values', [])
-    for num in range(len(sheet)):
-        if '0' in sheet[num][0]:
-            sheet.pop(num)
+    filter_list = []
+    for value in sheet:
+        if 'TRUE' in value[0]:
+            filter_list.append(value)
 
     # clear cells 
     data_sheet = []
-    for row in range(len(sheet)):
+    for row in range(len(filter_list)):
         temp = []
-        for cell in range(len(sheet[row])):
-            new_cell = sheet[row][cell].replace(sheet[row][cell],sheet[row][cell].strip())  
+        for cell in range(len(filter_list[row])):
+            new_cell = filter_list[row][cell].replace(filter_list[row][cell],filter_list[row][cell].strip())  
             temp.append(new_cell)
             if cell == len(sheet[row])-1:
                 data_sheet.append(temp)
